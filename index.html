@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>$GRH — Gas on RobinHood</title>
+<meta name="description" content="Live gwei on the Robinhood network. $GRH — Gas on RobinHood." />
+<link rel="icon" type="image/png" href="aaaaaa.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --green:#c6f21b;
+    --green-dim:#9dbf22;
+    --black:#0a0a0a;
+    --panel:#111111;
+    --line:#262626;
+    --muted:#6f6f6f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--green);
+    color:var(--black);
+    font-family:"Space Grotesk",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  .layout{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:stretch;
+    justify-content:center;
+    gap:20px;
+    width:min(1360px,100%);
+  }
+
+  .card{
+    flex:0 1 440px;
+    max-width:520px;
+    background:var(--black);
+    color:var(--green);
+    border-radius:22px;
+    padding:38px 34px 30px;
+    box-shadow:0 40px 90px -20px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.2);
+    position:relative;
+    overflow:hidden;
+  }
+  .card::after{
+    /* faint jerrycan-style cross emboss */
+    content:"";
+    position:absolute;inset:0;
+    background:
+      linear-gradient(135deg,transparent 48%,rgba(255,255,255,.03) 49%,rgba(255,255,255,.03) 51%,transparent 52%),
+      linear-gradient(45deg,transparent 48%,rgba(255,255,255,.03) 49%,rgba(255,255,255,.03) 51%,transparent 52%);
+    pointer-events:none;
+  }
+
+  header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:14px;
+    position:relative;
+    z-index:1;
+  }
+  .brand{display:flex;align-items:center;gap:12px}
+  .brand svg,.brand img{width:34px;height:34px;display:block}
+  .brand .name{
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    line-height:1.15;
+  }
+  .brand .name span{display:block;color:var(--green-dim);font-size:11px;letter-spacing:.22em}
+  .head-actions{display:flex;align-items:center;gap:8px}
+  .ticker{
+    font-family:"Space Mono",monospace;
+    font-weight:700;
+    font-size:14px;
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:6px 12px;
+    color:var(--green);
+  }
+  .xbtn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:32px;height:32px;
+    border-radius:999px;
+    background:var(--green);
+    color:var(--black);
+    text-decoration:none;
+    flex-shrink:0;
+    transition:background .15s;
+  }
+  .xbtn svg{width:15px;height:15px;display:block}
+  .xbtn:hover{background:#d7ff45}
+
+  .readout{
+    position:relative;
+    z-index:1;
+    text-align:center;
+    padding:46px 0 30px;
+  }
+  .label{
+    font-family:"Space Mono",monospace;
+    font-size:12px;
+    letter-spacing:.34em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:14px;
+  }
+  .value{
+    font-family:"Space Mono",monospace;
+    font-weight:700;
+    font-size:clamp(64px,18vw,116px);
+    line-height:1;
+    letter-spacing:-.02em;
+    color:var(--green);
+    text-shadow:0 0 34px rgba(198,242,27,.28);
+    font-variant-numeric:tabular-nums;
+  }
+  .value.loading{color:var(--line);text-shadow:none}
+  .unit{
+    font-family:"Space Mono",monospace;
+    font-size:15px;
+    letter-spacing:.4em;
+    text-transform:uppercase;
+    color:var(--green-dim);
+    margin-top:16px;
+  }
+
+  .chart{
+    position:relative;
+    z-index:1;
+    margin:4px 0 22px;
+  }
+  .chart-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    font-family:"Space Mono",monospace;
+    font-size:10px;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:8px;
+  }
+  .chart-head .range{color:var(--green-dim);letter-spacing:.12em}
+  .chart-axis{
+    display:flex;
+    justify-content:space-between;
+    font-family:"Space Mono",monospace;
+    font-size:9px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-top:6px;
+  }
+  .spark-wrap{position:relative}
+  .chart svg{display:block;width:100%;height:88px;overflow:visible;touch-action:none;cursor:crosshair}
+  .chart .grid{stroke:var(--line);stroke-width:1}
+  .chart .area{fill:url(#grhFill)}
+  .chart .stroke{fill:none;stroke:var(--green);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+  .chart .head-dot{fill:var(--green)}
+  .chart .cross-line{stroke:var(--green-dim);stroke-width:1;stroke-dasharray:2 3}
+  .chart .cross-dot{fill:var(--green);stroke:#000;stroke-width:1.5}
+  .chart .empty{
+    font-family:"Space Mono",monospace;
+    font-size:11px;
+    fill:var(--muted);
+    letter-spacing:.1em;
+  }
+  .tip{
+    position:absolute;
+    transform:translate(-50%,-100%);
+    margin-top:-9px;
+    background:#000;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:5px 9px;
+    font-family:"Space Mono",monospace;
+    font-size:11px;
+    line-height:1.4;
+    color:var(--green);
+    white-space:nowrap;
+    pointer-events:none;
+    z-index:4;
+  }
+  .tip .tip-t{color:var(--muted);font-size:9px;letter-spacing:.06em}
+
+  .ca{
+    position:relative;
+    z-index:1;
+    display:flex;
+    align-items:center;
+    gap:10px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    padding:12px 14px;
+    margin-bottom:22px;
+    font-family:"Space Mono",monospace;
+  }
+  .ca .tag{
+    font-size:10px;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .ca .addr{
+    flex:1;
+    min-width:0;
+    font-size:12px;
+    color:var(--green);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .ca button{
+    flex-shrink:0;
+    font-family:"Space Mono",monospace;
+    font-size:10px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--black);
+    background:var(--green);
+    border:0;
+    border-radius:8px;
+    padding:7px 12px;
+    cursor:pointer;
+  }
+  .ca button:hover{background:#d7ff45}
+  .ca button.copied{background:var(--green-dim);color:var(--black)}
+  /* TEMP: CA reveal placeholder + countdown */
+  .ca-soon{
+    flex:1;
+    min-width:0;
+    font-size:12px;
+    color:var(--muted);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .ca-timer{
+    flex-shrink:0;
+    font-size:12px;
+    font-weight:700;
+    letter-spacing:.12em;
+    color:var(--green);
+    font-variant-numeric:tabular-nums;
+  }
+  .ca-timer.done{color:var(--muted)}
+
+  /* separate DEX chart panel, sits beside the gwei card */
+  .dex-card{
+    flex:1 1 520px;
+    min-width:0;
+    display:flex;
+    flex-direction:column;
+    background:var(--black);
+    border-radius:22px;
+    padding:22px 22px 20px;
+    box-shadow:0 40px 90px -20px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.2);
+  }
+  .dex-head{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    gap:12px;
+    font-family:"Space Mono",monospace;
+    font-size:10px;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+    color:var(--muted);
+    margin-bottom:12px;
+  }
+  .dex-head a{color:var(--green);text-decoration:none;letter-spacing:.12em}
+  .dex-head a:hover{color:#d7ff45}
+  .dex-frame{
+    position:relative;
+    width:100%;
+    flex:1;
+    min-height:320px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    overflow:hidden;
+    background:#141414;
+  }
+  .dex-frame iframe{position:absolute;inset:0;width:100%;height:100%;border:0;display:block}
+  .dex-fallback{
+    position:absolute;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    text-align:center;
+    padding:24px;
+    font-family:"Space Mono",monospace;
+  }
+  .dex-fallback strong{
+    font-size:13px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--green);
+  }
+  .dex-fallback span{
+    font-size:11px;
+    line-height:1.6;
+    letter-spacing:.04em;
+    color:var(--muted);
+    max-width:300px;
+  }
+  .dex-fallback code{
+    color:var(--green-dim);
+    background:rgba(198,242,27,.08);
+    padding:1px 5px;
+    border-radius:4px;
+  }
+
+  /* temporary "coming soon" placeholder for the DEX panel */
+  .dex-soon{
+    flex:1;
+    min-height:320px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    text-align:center;
+    padding:24px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:#141414;
+    font-family:"Space Mono",monospace;
+  }
+  .dex-soon-tag{
+    font-size:10px;
+    letter-spacing:.24em;
+    text-transform:uppercase;
+    color:var(--muted);
+  }
+  .dex-soon strong{
+    font-size:20px;
+    letter-spacing:.16em;
+    text-transform:uppercase;
+    color:var(--green);
+  }
+  .dex-soon-sub{
+    font-size:11px;
+    line-height:1.6;
+    letter-spacing:.05em;
+    color:var(--muted);
+    max-width:280px;
+  }
+
+  footer{
+    position:relative;
+    z-index:1;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    border-top:1px solid var(--line);
+    padding-top:16px;
+    font-family:"Space Mono",monospace;
+    font-size:11px;
+    color:var(--muted);
+    letter-spacing:.06em;
+  }
+  .net{display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.16em}
+  .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--green);
+    box-shadow:0 0 0 0 rgba(198,242,27,.6);
+    animation:pulse 2s infinite;
+  }
+  .dot.stale{background:#b8532a;animation:none}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(198,242,27,.55)}
+    70%{box-shadow:0 0 0 9px rgba(198,242,27,0)}
+    100%{box-shadow:0 0 0 0 rgba(198,242,27,0)}
+  }
+  footer .upd{cursor:pointer;color:var(--muted)}
+  footer .upd:hover{color:var(--green-dim)}
+
+  @media (max-width:420px){
+    .card{padding:28px 20px 22px;border-radius:18px}
+    .dex-card{padding:18px 16px 16px;border-radius:18px}
+    .brand .name{font-size:13px}
+  }
+</style>
+</head>
+<body>
+  <div class="layout">
+  <main class="card">
+    <header>
+      <div class="brand">
+        <img src="aaaaaa.png" alt="$GRH logo" />
+        <div class="name">Gas on RobinHood<span>the gwei terminal</span></div>
+      </div>
+      <div class="head-actions">
+        <div class="ticker">$GRH</div>
+        <!-- put your X (Twitter) profile link here -->
+        <a class="xbtn" href="https://x.com/GasOnRobinhood" target="_blank" rel="noopener" aria-label="Open on X">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.9 1.6h3.5l-7.63 8.72L23.8 22.4h-7l-5.49-7.18L5.02 22.4H1.5l8.16-9.33L.65 1.6h7.18l4.96 6.56ZM17.67 20.3h1.94L6.42 3.59H4.34Z"/></svg>
+        </a>
+      </div>
+    </header>
+
+    <section class="readout">
+      <div class="label">Current gas price</div>
+      <div id="value" class="value loading">--</div>
+      <div class="unit">gwei</div>
+    </section>
+
+    <div class="chart">
+      <div class="chart-head">
+        <span>gwei history · 24h</span>
+        <span id="range" class="range">—</span>
+      </div>
+      <div class="spark-wrap">
+        <svg id="spark" viewBox="0 0 300 88" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="grhFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#c6f21b" stop-opacity="0.28"/>
+              <stop offset="100%" stop-color="#c6f21b" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <line class="grid" x1="0" y1="87" x2="300" y2="87"/>
+          <text class="empty" x="150" y="48" text-anchor="middle">loading 24h history…</text>
+        </svg>
+        <div id="tip" class="tip" hidden></div>
+      </div>
+      <div class="chart-axis"><span>−24h</span><span>−12h</span><span>now</span></div>
+    </div>
+
+    <div class="ca">
+      <!-- TEMP: CA hidden until launch, showing a countdown. Restore this block when ready.
+      <span class="tag">CA</span>
+      <span id="addr" class="addr">0x28247CE4d4DE99b2295ece6852B3f4A224Fa3232</span>
+      <button id="copy" type="button">Copy</button>
+      -->
+      <span class="tag">CA</span>
+      <span class="ca-soon">Revealed at 21:21 UTC</span>
+      <span id="caCountdown" class="ca-timer">--:--:--</span>
+    </div>
+
+    <footer>
+      <div class="net"><span id="dot" class="dot"></span><span>Robinhood network</span></div>
+      <div id="updated" class="upd" title="Click to refresh">connecting…</div>
+    </footer>
+  </main>
+
+  <aside class="dex-card">
+    <!-- TEMP: DEX chart disabled, showing "coming soon". Restore the block below when ready.
+    <div class="dex-head">
+      <span>DEX Screener · $GRH</span>
+      <a id="dexLink" href="https://dexscreener.com/" target="_blank" rel="noopener">Open full chart</a>
+    </div>
+    <div class="dex-frame">
+      <div id="dexFallback" class="dex-fallback">
+        <strong>Chart goes live here</strong>
+        <span>Paste the token CA into DEX_TOKEN in the script. It shows once $GRH has a live pool on a chain DEX Screener indexes.</span>
+      </div>
+    </div>
+    -->
+    <div class="dex-soon">
+      <span class="dex-soon-tag">DEX Screener · $GRH</span>
+      <strong>Coming soon</strong>
+      <span class="dex-soon-sub">Live $GRH price chart lands here after launch</span>
+    </div>
+  </aside>
+  </div>
+
+<script>
+(function(){
+  // ── Config ───────────────────────────────────────────────────────────────
+  // The Robinhood network (Robinhood Chain, an Arbitrum-based L2) has no public
+  // gas endpoint yet, so we read gwei from Ethereum mainnet — the settlement
+  // layer L2 gas is denominated in. Swap RPCS for the Robinhood Chain RPC once
+  // it goes live and the rest of the page keeps working.
+  var RPCS = [
+    "https://eth.llamarpc.com",
+    "https://ethereum-rpc.publicnode.com",
+    "https://rpc.ankr.com/eth",
+    "https://cloudflare-eth.com"
+  ];
+  var REFRESH_MS  = 12000;
+  var WINDOW_MS   = 24 * 60 * 60 * 1000;  // 24h chart window
+  var SAMPLES     = 48;                   // historical points to seed on load
+  var SPAN_BLOCKS = 7200;                 // ~24h at ~12s per block
+
+  // ── DEX Screener price chart ─────────────────────────────────────────
+  // Recommended: paste the TOKEN contract address (CA) into DEX_TOKEN. The
+  // script asks the DEX Screener API for that token's most-liquid pool and
+  // embeds it automatically. DEX Screener must already index the token —
+  // that means a live pool on a chain DEX Screener supports (there is no
+  // "robinhood" chain there yet, so it can't load until Robinhood's chain
+  // is listed on dexscreener.com).
+  //
+  // Manual alternative: set DEX_CHAIN + DEX_PAIR with the POOL/PAIR address
+  // (NOT the token CA) and the chain slug exactly as they appear in the
+  // dexscreener.com/<chain>/<pair> URL of that pool.
+  // TEMP: DEX config unused while the panel shows "coming soon" — kept for restore.
+  // var DEX_TOKEN = "0x1019f41e1eb76c2df790c4f1bf10e6ca85eb3251";        // token contract address (easiest)
+  // var DEX_CHAIN = "robinhood";        // e.g. "ethereum" | "base" | "solana"
+  // var DEX_PAIR  = "";        // pool/pair address — NOT the token CA
+
+  var valueEl   = document.getElementById("value");
+  var updatedEl = document.getElementById("updated");
+  var dotEl     = document.getElementById("dot");
+  var sparkEl   = document.getElementById("spark");
+  var rangeEl   = document.getElementById("range");
+  var copyEl    = document.getElementById("copy");
+  var addrEl    = document.getElementById("addr");
+  var tipEl     = document.getElementById("tip");
+  var wrapEl    = document.querySelector(".spark-wrap");
+  var history   = [];   // [{ t: epochMs, v: gwei }]
+  var timer;
+
+  var W = 300, H = 88, PAD = 6;
+  var view = null;          // last render state, for hover lookups
+  var hovering = false;
+  var lastMove = null;      // last pointer event, to re-place tip after re-render
+
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  function el(name, attrs){
+    var n = document.createElementNS(SVG_NS, name);
+    for (var k in attrs) n.setAttribute(k, attrs[k]);
+    return n;
+  }
+
+  function renderChart(loading){
+    var keep = sparkEl.querySelector("defs");
+    sparkEl.innerHTML = "";
+    if (keep) sparkEl.appendChild(keep);
+    sparkEl.appendChild(el("line", {class:"grid", x1:0, y1:87, x2:300, y2:87}));
+
+    var now = Date.now();
+    var start = now - WINDOW_MS;
+    var pts = history.filter(function(p){ return p.t >= start - 60000; });
+
+    if (pts.length < 2){
+      var t = el("text", {class:"empty", x:150, y:48, "text-anchor":"middle"});
+      t.textContent = loading ? "loading 24h history…" : (history.length ? "collecting data…" : "no data");
+      sparkEl.appendChild(t);
+      rangeEl.textContent = pts.length ? pts[0].v.toFixed(1) + " gwei" : "—";
+      view = null;
+      hideHover();
+      return;
+    }
+
+    var vs = pts.map(function(p){ return p.v; });
+    var min = Math.min.apply(null, vs);
+    var max = Math.max.apply(null, vs);
+    var span = (max - min) || 1;
+
+    var xOf = function(ms){ return Math.max(0, Math.min(W, (ms - start) / WINDOW_MS * W)); };
+    var yOf = function(v){ return PAD + (H - PAD * 2) * (1 - (v - min) / span); };
+
+    var coords = pts.map(function(p){ return [xOf(p.t), yOf(p.v)]; });
+    var line = coords.map(function(c, i){ return (i ? "L" : "M") + c[0].toFixed(1) + " " + c[1].toFixed(1); }).join(" ");
+    var x0 = coords[0][0], xN = coords[coords.length - 1][0];
+    var area = line + " L" + xN.toFixed(1) + " " + (H - 1) + " L" + x0.toFixed(1) + " " + (H - 1) + " Z";
+
+    sparkEl.appendChild(el("path", {class:"area", d:area}));
+    sparkEl.appendChild(el("path", {class:"stroke", d:line}));
+    var last = coords[coords.length - 1];
+    sparkEl.appendChild(el("circle", {class:"head-dot", cx:last[0], cy:last[1], r:3}));
+
+    rangeEl.textContent = min.toFixed(1) + " – " + max.toFixed(1) + " gwei";
+
+    view = { pts: pts, start: start, min: min, span: span };
+    if (hovering && lastMove) positionHover(lastMove);
+  }
+
+  function utcTime(ms){
+    var d = new Date(ms), p = function(n){ return (n < 10 ? "0" : "") + n; };
+    return p(d.getUTCHours()) + ":" + p(d.getUTCMinutes());
+  }
+  function ago(ms){
+    var m = Math.round((Date.now() - ms) / 60000);
+    if (m < 1) return "just now";
+    if (m < 60) return m + "m ago";
+    return Math.floor(m / 60) + "h " + (m % 60) + "m ago";
+  }
+
+  function hideHover(){
+    hovering = false;
+    lastMove = null;
+    if (tipEl) tipEl.hidden = true;
+    var g = sparkEl.querySelector(".cross");
+    if (g) g.parentNode.removeChild(g);
+  }
+
+  function positionHover(ev){
+    if (!view || !view.pts || view.pts.length < 2){ hideHover(); return; }
+    var rect = sparkEl.getBoundingClientRect();
+    if (!rect.width) return;
+    var frac = Math.max(0, Math.min(1, (ev.clientX - rect.left) / rect.width));
+    var target = view.start + frac * WINDOW_MS;
+
+    var pts = view.pts, best = 0, bestD = Infinity;
+    for (var i = 0; i < pts.length; i++){
+      var d = Math.abs(pts[i].t - target);
+      if (d < bestD){ bestD = d; best = i; }
+    }
+    var pt = pts[best];
+    var x = Math.max(0, Math.min(W, (pt.t - view.start) / WINDOW_MS * W));
+    var y = PAD + (H - PAD * 2) * (1 - (pt.v - view.min) / view.span);
+
+    var g = sparkEl.querySelector(".cross");
+    if (!g){ g = el("g", { class: "cross" }); sparkEl.appendChild(g); }
+    g.innerHTML = "";
+    g.appendChild(el("line", { class: "cross-line", x1: x, y1: 0, x2: x, y2: H }));
+    g.appendChild(el("circle", { class: "cross-dot", cx: x, cy: y, r: 3.5 }));
+
+    tipEl.hidden = false;
+    tipEl.innerHTML =
+      '<div class="tip-v">' + fmt(pt.v) + ' gwei</div>' +
+      '<div class="tip-t">' + utcTime(pt.t) + ' UTC · ' + ago(pt.t) + '</div>';
+    var wrapW = wrapEl.clientWidth || rect.width;
+    var leftPx = Math.max(34, Math.min(wrapW - 34, x / W * wrapW));
+    tipEl.style.left = leftPx + "px";
+    tipEl.style.top = (y / H * rect.height) + "px";
+  }
+
+  function onHoverMove(ev){
+    hovering = true;
+    lastMove = ev;
+    positionHover(ev);
+  }
+
+  if (wrapEl){
+    wrapEl.addEventListener("pointermove", onHoverMove);
+    wrapEl.addEventListener("pointerdown", onHoverMove);
+    wrapEl.addEventListener("pointerleave", hideHover);
+    wrapEl.addEventListener("pointercancel", hideHover);
+    wrapEl.addEventListener("pointerup", function(ev){
+      if (ev.pointerType !== "mouse") hideHover();
+    });
+  }
+
+  function pushPoint(t, v){
+    var last = history[history.length - 1];
+    if (last && t - last.t < 5000){ last.t = t; last.v = v; }
+    else history.push({ t: t, v: v });
+    var cutoff = Date.now() - WINDOW_MS - 60000;
+    while (history.length && history[0].t < cutoff) history.shift();
+  }
+
+  function fmt(gwei){
+    if (gwei >= 100) return gwei.toFixed(0);
+    if (gwei >= 10)  return gwei.toFixed(1);
+    return gwei.toFixed(2);
+  }
+
+  function stamp(){
+    var d = new Date();
+    var p = function(n){ return (n<10?"0":"")+n; };
+    return p(d.getUTCHours())+":"+p(d.getUTCMinutes())+":"+p(d.getUTCSeconds())+" UTC";
+  }
+
+  async function rpc(url, method, params){
+    var res = await fetch(url, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({ jsonrpc:"2.0", method:method, params:params, id:1 })
+    });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    var json = await res.json();
+    if(!json || json.error || json.result == null) throw new Error("bad payload");
+    return json.result;
+  }
+
+  function blockToPoint(b){
+    return {
+      t: parseInt(b.timestamp, 16) * 1000,
+      v: parseInt(b.baseFeePerGas, 16) / 1e9   // base fee, wei → gwei
+    };
+  }
+
+  async function latestBlock(url){
+    var b = await rpc(url, "eth_getBlockByNumber", ["latest", false]);
+    var p = blockToPoint(b);
+    p.number = parseInt(b.number, 16);
+    return p;
+  }
+
+  // One batched JSON-RPC call for many historical block headers.
+  async function historyFrom(url, latestNum){
+    var stepBlocks = Math.floor(SPAN_BLOCKS / SAMPLES);
+    var payload = [];
+    for (var k = SAMPLES; k >= 1; k--){
+      var bn = latestNum - k * stepBlocks;
+      if (bn > 0) payload.push({ jsonrpc:"2.0", method:"eth_getBlockByNumber", params:["0x"+bn.toString(16), false], id:k });
+    }
+    var res = await fetch(url, {
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(payload)
+    });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    var arr = await res.json();
+    if(!Array.isArray(arr)) throw new Error("no batch support");
+    return arr
+      .filter(function(x){ return x && x.result && x.result.baseFeePerGas; })
+      .map(function(x){ return blockToPoint(x.result); })
+      .sort(function(a, b){ return a.t - b.t; });
+  }
+
+  function applyLatest(p){
+    valueEl.textContent = fmt(p.v);
+    valueEl.classList.remove("loading");
+    dotEl.classList.remove("stale");
+    updatedEl.textContent = "updated " + stamp();
+  }
+
+  // Seed the chart with the real last-24h history before live polling starts.
+  async function seedHistory(){
+    for (var i=0;i<RPCS.length;i++){
+      try{
+        var latest = await latestBlock(RPCS[i]);
+        var past   = await historyFrom(RPCS[i], latest.number);
+        if (past.length < 2) throw new Error("thin history");
+        past.push({ t: latest.t, v: latest.v });
+        history = past;
+        applyLatest(latest);
+        renderChart();
+        return true;
+      }catch(e){ /* try next endpoint */ }
+    }
+    return false;
+  }
+
+  async function tick(){
+    for (var i=0;i<RPCS.length;i++){
+      try{
+        var p = await latestBlock(RPCS[i]);
+        if (!isFinite(p.v) || p.v <= 0) throw new Error("nan");
+        applyLatest(p);
+        pushPoint(p.t, p.v);
+        renderChart();
+        return;
+      }catch(e){ /* try next endpoint */ }
+    }
+    dotEl.classList.add("stale");
+    updatedEl.textContent = "offline · retrying…";
+    if (valueEl.classList.contains("loading")) valueEl.textContent = "--";
+  }
+
+  function loop(){
+    clearTimeout(timer);
+    tick().finally(function(){ timer = setTimeout(loop, REFRESH_MS); });
+  }
+
+  updatedEl.addEventListener("click", loop);
+  document.addEventListener("visibilitychange", function(){
+    if (!document.hidden) loop();
+  });
+
+  if (copyEl && addrEl) copyEl.addEventListener("click", function(){
+    var ca = addrEl.textContent.trim();
+    var done = function(){
+      copyEl.textContent = "Copied";
+      copyEl.classList.add("copied");
+      setTimeout(function(){
+        copyEl.textContent = "Copy";
+        copyEl.classList.remove("copied");
+      }, 1400);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(ca).then(done, done);
+    } else {
+      var r = document.createRange(); r.selectNode(addrEl);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      try { document.execCommand("copy"); } catch(e){}
+      s.removeAllRanges();
+      done();
+    }
+  });
+
+  // ── TEMP: CA reveal countdown → next 21:21 UTC ────────────────────────
+  // Remove this block (and restore the CA markup) after the reveal.
+  (function caCountdown(){
+    var elc = document.getElementById("caCountdown");
+    if (!elc) return;
+    var TH = 21, TM = 21;   // target time in UTC (HH, MM)
+    var n = new Date();
+    var goal = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), TH, TM, 0, 0);
+    if (goal <= Date.now()) goal += 86400000;   // already passed today → next day
+    var pad = function(x){ return (x < 10 ? "0" : "") + x; };
+    function render(){
+      var ms = goal - Date.now();
+      if (ms <= 0){
+        elc.textContent = "00:00:00";
+        elc.classList.add("done");
+        clearInterval(iv);
+        return;
+      }
+      var s = Math.floor(ms / 1000);
+      elc.textContent = pad(Math.floor(s / 3600)) + ":" + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60);
+    }
+    var iv = setInterval(render, 1000);
+    render();
+  })();
+
+  // ── TEMP: DEX chart mount disabled while the panel shows "coming soon".
+  // Uncomment this whole block (and the markup in .dex-card) to restore it.
+  // (async function mountDex(){
+  //   var frame = document.querySelector(".dex-frame");
+  //   var fallback = document.getElementById("dexFallback");
+  //   var link = document.getElementById("dexLink");
+  //   if (!frame) return;
+  //
+  //   var chain = DEX_CHAIN, pair = DEX_PAIR;
+  //
+  //   // No explicit pair? Resolve the token's top pool from the DEX Screener API.
+  //   if ((!chain || !pair) && DEX_TOKEN){
+  //     try{
+  //       var r = await fetch("https://api.dexscreener.com/latest/dex/tokens/" + DEX_TOKEN);
+  //       var j = await r.json();
+  //       var list = (j && j.pairs) || [];
+  //       list.sort(function(a, b){
+  //         return ((b.liquidity && b.liquidity.usd) || 0) - ((a.liquidity && a.liquidity.usd) || 0);
+  //       });
+  //       if (list[0]){ chain = list[0].chainId; pair = list[0].pairAddress; }
+  //     }catch(e){}
+  //   }
+  //
+  //   if (!chain || !pair) return;
+  //
+  //   var page = "https://dexscreener.com/" + chain + "/" + pair;
+  //   link.href = page;
+  //   var iframe = document.createElement("iframe");
+  //   iframe.title = "$GRH price chart";
+  //   iframe.loading = "lazy";
+  //   iframe.src = page + "?embed=1&theme=dark&chartTheme=dark&trades=0&info=0&tabs=0&chartLeftToolbar=0&loadChartSettings=0&interval=15";
+  //   frame.appendChild(iframe);
+  //   if (fallback) fallback.remove();
+  // })();
+
+  renderChart(true);
+  (async function init(){
+    await seedHistory();   // pull real 24h history; falls back to live-only
+    loop();
+  })();
+})();
+</script>
+</body>
+</html>
