@@ -239,25 +239,6 @@
   }
   .ca button:hover{background:#d7ff45}
   .ca button.copied{background:var(--green-dim);color:var(--black)}
-  /* TEMP: CA reveal placeholder + countdown */
-  .ca-soon{
-    flex:1;
-    min-width:0;
-    font-size:12px;
-    color:var(--muted);
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-  .ca-timer{
-    flex-shrink:0;
-    font-size:12px;
-    font-weight:700;
-    letter-spacing:.12em;
-    color:var(--green);
-    font-variant-numeric:tabular-nums;
-  }
-  .ca-timer.done{color:var(--muted)}
 
   /* separate DEX chart panel, sits beside the gwei card */
   .dex-card{
@@ -445,14 +426,9 @@
     </div>
 
     <div class="ca">
-      <!-- TEMP: CA hidden until launch, showing a countdown. Restore this block when ready.
       <span class="tag">CA</span>
-      <span id="addr" class="addr">0x28247CE4d4DE99b2295ece6852B3f4A224Fa3232</span>
+      <span id="addr" class="addr">0x672b545189f9eb25dB5D9ECE0eC97735c00553E7</span>
       <button id="copy" type="button">Copy</button>
-      -->
-      <span class="tag">CA</span>
-      <span class="ca-soon">Revealed at 21:21 UTC</span>
-      <span id="caCountdown" class="ca-timer">--:--:--</span>
     </div>
 
     <footer>
@@ -769,7 +745,7 @@
     if (!document.hidden) loop();
   });
 
-  if (copyEl && addrEl) copyEl.addEventListener("click", function(){
+  copyEl.addEventListener("click", function(){
     var ca = addrEl.textContent.trim();
     var done = function(){
       copyEl.textContent = "Copied";
@@ -789,31 +765,6 @@
       done();
     }
   });
-
-  // ── TEMP: CA reveal countdown → next 21:21 UTC ────────────────────────
-  // Remove this block (and restore the CA markup) after the reveal.
-  (function caCountdown(){
-    var elc = document.getElementById("caCountdown");
-    if (!elc) return;
-    var TH = 21, TM = 21;   // target time in UTC (HH, MM)
-    var n = new Date();
-    var goal = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate(), TH, TM, 0, 0);
-    if (goal <= Date.now()) goal += 86400000;   // already passed today → next day
-    var pad = function(x){ return (x < 10 ? "0" : "") + x; };
-    function render(){
-      var ms = goal - Date.now();
-      if (ms <= 0){
-        elc.textContent = "00:00:00";
-        elc.classList.add("done");
-        clearInterval(iv);
-        return;
-      }
-      var s = Math.floor(ms / 1000);
-      elc.textContent = pad(Math.floor(s / 3600)) + ":" + pad(Math.floor(s / 60) % 60) + ":" + pad(s % 60);
-    }
-    var iv = setInterval(render, 1000);
-    render();
-  })();
 
   // ── TEMP: DEX chart mount disabled while the panel shows "coming soon".
   // Uncomment this whole block (and the markup in .dex-card) to restore it.
